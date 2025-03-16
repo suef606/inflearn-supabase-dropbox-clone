@@ -1,6 +1,9 @@
 "use client";
 
-import { IconButton } from "@material-tailwind/react";
+import { IconButton, Spinner } from "@material-tailwind/react"; // Spinner 추가
+import { useMutation } from "@tanstack/react-query";
+import { deleteFile } from "actions/storageActions";
+import { queryClient } from "config/ReactQueryClientProvider";
 import { getImageUrl } from "utils/supabase/storage";
 
 // 타입 정의 추가
@@ -14,11 +17,33 @@ interface DropboxImageProps {
 }
 
 export default function DropboxImage({ image }: DropboxImageProps) {
+  const deleteFileMutation = useMutation({
+    mutationFn: deleteFile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["images"],
+      });
+    },
+  });
+
+  // Spinner의 props를 any 타입으로 정의하여 타입 에러 방지
+  const spinnerProps: any = {
+    className: "h-4 w-4" // 크기 조정 (필요에 따라 조정)
+  };
+
   // IconButton의 props를 any 타입으로 정의하여 타입 에러 해결
+  // loading 속성 제거 - 이 속성이 경고를 발생시키는 원인
   const iconButtonProps: any = {
-    onClick: () => {},
+    onClick: () => {
+      deleteFileMutation.mutate(image.name);
+    },
     color: "red",
-    children: <i className="fas fa-trash" />
+    // 조건부 렌더링으로 children 설정 - 여기서 로딩 상태를 처리
+    children: deleteFileMutation.isPending ? (
+      <Spinner {...spinnerProps} />
+    ) : (
+      <i className="fas fa-trash" />
+    )
   };
 
   // 이미지 URL 생성 시 오류 처리 추가
